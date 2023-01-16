@@ -41,5 +41,17 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Get build artifacts
+        # 他のjobでuploadしたartifactを使う場合は、そのuploadのjobがこのjobの前提になるように指定しなければいけない。
+        # ※ 並列で実行すると、uploadが完了していないため。
+        uses: actions/download-artifact@v3
+        with:
+          # 指定したartifactは、unzipされて取得できるためそのまま使える。
+          name: dist-files
+          # pathを指定すれば、任意のディレクトリにダウンロードできる。
+          # もしpathを指定しなければ、そのままその場所にダウンロードされる。
+          path: dist-folder
+      - name: ls dist-folder
+        run: ls dist-folder
       - name: Deploy
-        run: echo "Deploying..."
+        run: echo "Deploying ..."
