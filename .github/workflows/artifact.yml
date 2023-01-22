@@ -10,7 +10,33 @@ jobs:
     steps:
       - name: Get code
         uses: actions/checkout@v3
+        # 依存関係をインストールする Install dependencies の前で実行する。
+        # また、このjob全体が実行し終わった後にも再度実行されるため、
+        # 次のステップの npm ciで依存関係が書き変わる場合てもキャッシュとして保存できる。
+        #
+        # ここで作成したキャッシュは、他のjobやワークフローでも使えるようにcentral cacheとして保存される。
+        # 指定したキーが見つからない場合はキャッシュを保存する。
+        # 見つかる場合は、指定したパスにキャッシュを復元する。
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          # キャッシュしたいファイル・ディレクトリのパスを指定する。
+          # ~/.npmをキャッシュする; https://dev.classmethod.jp/articles/cicd-npm-ci-cache/
+          path: ~/.npm
+          # keyは、静的な固定文字列を指定するのではなく、以下のように動的なロジックで指定することによって、
+          # 依存関係の再インストールが必要かどうかを判断できるようにする。
+          # 
+          # hashFilesは、指定したファイルたちをハッシュ化する。
+          # ここでは、任意のディレクトリのpackage-lock.jsonたちをハッシュ化する。
+          # package-log.jsonの中身が変わったら(=依存関係の再インストールが必要)、keyが変わるので存在しないキーで新たに生成される。
+          # 新たなキーが指定されると、もともと保存していたkeyのキャッシュは削除される。
+          key: deps-node-modules-${{ hashFiles('**/package-lock.json') }}
       - name: Install dependencies
+        # npm ciが実行されるときに、~/.nmpにキャッシュが存在していれば、ネットワーク越しにダウンロードするのではなく、キャッシュから取得できる。
+        # npm installの場合は、package.jsonから依存関係を解決しようとするため、
+        # メジャーバージョンは指定されているがマイナーバージョンは指定されてない場合は、開発環境とCI環境でバージョンの差異が発生する可能性があるため、
+        # npm ci を使うことが望ましい。
+        # npm ci は、 pakage-lock.jsonを見て依存関係を解決するため、マイナーバージョンまですべて同じで環境を再現されることができる。
         run: npm ci
       - name: Lint code
         run: npm run lint
@@ -26,6 +52,12 @@ jobs:
     steps:
       - name: Get code
         uses: actions/checkout@v3
+      # 依存関係をインストールしている場所の前では同様にchacheを作成すること。
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: deps-node-modules-${{ hashFiles('**/package-lock.json') }}
       - name: Install dependencies
         run: npm ci
       - name: Build website
@@ -62,7 +94,7 @@ jobs:
           # pathを指定すれば、任意のディレクトリにダウンロードできる。
           # もしpathを指定しなければ、そのままその場所にダウンロードされる。
           path: dist-folder
-      - name: get needs.build.outputs.builded-js-file 
+      - name: get needs.build.outputs.builded-js-file
         # needs. には、現在のジョブの直接依存関係として定義されたすべてのジョブからの出力が含まれる。
         run: echo "${{ needs.build.outputs.builded-js-file }}"
       - name: ls dist-folder
