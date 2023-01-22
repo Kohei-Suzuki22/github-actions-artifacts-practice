@@ -19,6 +19,10 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
+    # このjobのoutputsに登録する。
+    outputs:
+      # idがpublishのstepのbuilded-js-fileという名前のoutputをbuilded-js-fileに登録する。
+      builded-js-file: ${{ steps.publish.outputs.builded-js-file  }}
     steps:
       - name: Get code
         uses: actions/checkout@v3
@@ -26,6 +30,13 @@ jobs:
         run: npm ci
       - name: Build website
         run: npm run build
+      - name: Publish JS filename
+        id: publish
+        # execdir: findの対象となった要素それぞれに対して実行できる。
+        # execdirは、例えばファイルが対象の場合、そのファイルのあるディレクトリに移動して実行することになる。
+        # execは、ディレクトリ移動はせず、findを実行したディレクトリから実行することになる。
+        run: find dist/assets/*.js -type f -execdir echo 'builded-js-file={}' >> $GITHUB_OUTPUT ';'
+
       - name: Upload Artifact
         # artifactをアップロードして、他のjobと共有することができる。
         # アップロードしたファイルを、他のjob上でdownloadすることによって、共有ができる。
