@@ -62,6 +62,9 @@ jobs:
           # pathを指定すれば、任意のディレクトリにダウンロードできる。
           # もしpathを指定しなければ、そのままその場所にダウンロードされる。
           path: dist-folder
+      - name: get needs.build.outputs.builded-js-file 
+        # needs. には、現在のジョブの直接依存関係として定義されたすべてのジョブからの出力が含まれる。
+        run: echo "${{ needs.build.outputs.builded-js-file }}"
       - name: ls dist-folder
         run: ls dist-folder
       - name: Deploy
